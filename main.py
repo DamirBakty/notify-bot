@@ -12,7 +12,6 @@ CHAT_ID = env.str('CHAT_ID')
 def send_telegram_message(text, token=BOT_TOKEN):
     apiURL = f'https://api.telegram.org/bot{token}/sendMessage'
     req = requests.get(apiURL, params={'chat_id': CHAT_ID, 'text': text, 'parse_mode': 'HTML'})
-    print(req.status_code)
     return req.status_code
 
 
@@ -34,7 +33,6 @@ while True:
             headers=headers,
         )
         data = response.json()
-        print(data)
         timestamp = int(response.json()['last_attempt_timestamp'])
         new_attempts = data.get('new_attempts')
         if new_attempts:
