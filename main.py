@@ -7,18 +7,18 @@ from environs import Env
 def send_telegram_message(text, token, chat_id):
     apiURL = f'https://api.telegram.org/bot{token}/sendMessage'
     req = requests.get(apiURL, params={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'})
-    return req.status_code
+    return req
 
 
 def main():
     env = Env()
     env.read_env()
 
-    AUTH_TOKEN = env.str('TOKEN')
-    BOT_TOKEN = env.str('BOT_TOKEN')
-    CHAT_ID = env.str('CHAT_ID')
+    auth_token = env.str('TOKEN')
+    bot_token = env.str('BOT_TOKEN')
+    chat_id = env.str('CHAT_ID')
     headers = {
-        'Authorization': AUTH_TOKEN
+        'Authorization': auth_token
     }
 
     long_polling_url = 'https://dvmn.org/api/long_polling/'
@@ -35,18 +35,16 @@ def main():
                 params=params,
                 timeout=120
             )
-            if response.status_code != 200:
-                print(f"Error sending long polling request. Status code: {response.status_code}")
-                continue
+            response.raise_for_status()
 
-            long_polling_details = response.json()
+            review_details = response.json()
 
-            if long_polling_details.get('status') == 'timeout':
-                timestamp = int(long_polling_details['timestamp_to_request'])
+            if review_details.get('status') == 'timeout':
+                timestamp = int(review_details['timestamp_to_request'])
             else:
-                timestamp = int(long_polling_details['last_attempt_timestamp'])
+                timestamp = int(review_details['last_attempt_timestamp'])
 
-            new_attempts = long_polling_details.get('new_attempts')
+            new_attempts = review_details.get('new_attempts')
             if new_attempts:
                 for attempt in new_attempts:
                     lesson_title = attempt.get('lesson_title')
@@ -62,19 +60,20 @@ def main():
                     lesson_url_message = f'Ссылка на урок: {lesson_url}'
                     message += status
                     message += lesson_url_message
-                    message_send_status = send_telegram_message(
+                    message_send = send_telegram_message(
                         text=message,
-                        token=BOT_TOKEN,
-                        chat_id=CHAT_ID
+                        token=bot_token,
+                        chat_id=chat_id
                     )
-                    if message_send_status != 200:
-                        print(f"Error sending telegram message. Status code: {message_send_status}")
+                    message_send.raise_for_status()
 
         except requests.exceptions.ConnectionError:
             print('Connection Error occurred')
             time.sleep(60)
         except requests.exceptions.ReadTimeout:
             print('Request Timed Out')
+        except requests.exceptions.HTTPError as err:
+            print(f'HTTP error. Status: {err}')
         except Exception as e:
             print(e)
 
