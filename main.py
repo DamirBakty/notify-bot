@@ -1,12 +1,15 @@
+import logging
 import time
 
 import requests
 from environs import Env
 
+logger = logging.getLogger(__name__)
+
 
 def send_telegram_message(text, token, chat_id):
-    apiURL = f'https://api.telegram.org/bot{token}/sendMessage'
-    req = requests.get(apiURL, params={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'})
+    api_url = f'https://api.telegram.org/bot{token}/sendMessage'
+    req = requests.get(api_url, params={'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'})
     return req
 
 
@@ -23,12 +26,17 @@ def main():
 
     long_polling_url = 'https://dvmn.org/api/long_polling/'
 
+    start_time = time.time()
+
     timestamp = None
     params = {}
     while True:
         try:
             if timestamp:
                 params['timestamp'] = timestamp
+                logger.debug(f'Started polling with timestamp: {timestamp}')
+            else:
+                logger.debug(f'Started polling without timestamp')
             response = requests.get(
                 long_polling_url,
                 headers=headers,
@@ -36,13 +44,11 @@ def main():
                 timeout=120
             )
             response.raise_for_status()
+            logger.debug(f"Polling time = {start_time - time.time()}")
 
             review_details = response.json()
-
-            if review_details.get('status') == 'timeout':
-                timestamp = int(review_details['timestamp_to_request'])
-            else:
-                timestamp = int(review_details['last_attempt_timestamp'])
+            timestamp = (review_details.get('last_attempt_timestamp')
+                         or review_details.get('timestamp_to_request'))
 
             new_attempts = review_details.get('new_attempts')
             if new_attempts:
@@ -60,22 +66,29 @@ def main():
                     lesson_url_message = f'Ссылка на урок: {lesson_url}'
                     message += status
                     message += lesson_url_message
+                    telegram_message_sending_timestamp = time.time()
                     message_send = send_telegram_message(
                         text=message,
                         token=bot_token,
                         chat_id=chat_id
                     )
                     message_send.raise_for_status()
+                    telegram_message_sent_timestamp = time.time()
+                    logger.debug(
+                        f'Send Telegram message. Duration: '
+                        f'{telegram_message_sent_timestamp - telegram_message_sending_timestamp}'
+                    )
 
         except requests.exceptions.ConnectionError:
-            print('Connection Error occurred')
-            time.sleep(60)
+            logger.error('Connection Error occurred. Sleeping for 120 seconds...')
+            time.sleep(120)
         except requests.exceptions.ReadTimeout:
-            print('Request Timed Out')
+            logger.error('Request Timed Out')
+            continue
         except requests.exceptions.HTTPError as err:
-            print(f'HTTP error. Status: {err}')
+            logger.error(f'HTTP error. Status: {err}')
         except Exception as e:
-            print(e)
+            logger.error(e)
 
 
 if __name__ == '__main__':
