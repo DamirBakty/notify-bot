@@ -7,8 +7,8 @@ from telegram.ext import Updater
 
 
 class BotHandler(logging.Handler):
-    def __init__(self, bot, chat_id):
-        self.bot = bot
+    def __init__(self, updater, chat_id):
+        self.updater = updater
         self.chat_id = chat_id
         super().__init__()
 
@@ -18,9 +18,39 @@ class BotHandler(logging.Handler):
 
     async def send_log_message(self, log_entry):
         try:
-            await self.bot.send_message(chat_id=self.chat_id, text='log_entry')
+            print(65)
+            return await self.updater.bot.send_message(
+                chat_id=self.chat_id,
+                text=log_entry
+            )
         except Exception as e:
-            print(f'Error sending Telegram message: {e}')
+            logging.error(e)
+            return e
+
+
+async def get_bot_logger(bot, chat_id):
+    updater = Updater(bot=bot, update_queue=None)
+    bot_handler = BotHandler(updater, chat_id)
+    bot_handler.setLevel(logging.DEBUG)
+    bot_handler.setFormatter(logging.Formatter('%(message)s'))
+
+    logger = logging.getLogger('bot_logger')
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(bot_handler)
+
+    return updater
+
+
+async def get_bot_updater(bot):
+    updater = Updater(bot=bot, update_queue=None)
+    return updater
+
+
+async def get_bot_handler(updater, chat_id):
+    bot_handler = BotHandler(updater, chat_id)
+    bot_handler.setLevel(logging.DEBUG)
+    bot_handler.setFormatter(logging.Formatter('%(message)s'))
+    return bot_handler
 
 
 async def start_bot():
@@ -36,23 +66,20 @@ async def start_bot():
     bot = Bot(token=bot_token)
 
     updater = Updater(bot=bot, update_queue=None)
-    bot_handler = BotHandler(bot, chat_id)
+    await updater.initialize()
+    bot_handler = BotHandler(updater, chat_id)
     bot_handler.setLevel(logging.INFO)
-    bot_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    bot_handler.setFormatter(logging.Formatter('%(message)s'))
 
     logger.addHandler(bot_handler)
-
-    await updater.initialize()
-
+    await updater.start_polling()
     message = 'Hello from your Telegram bot!'
+    try:
+        a = 1 / 0
+    except ZeroDivisionError as e:
+        logger.error(e)
 
-    # a = 1 / 0
-
-    # await bot.send_message(chat_id=chat_id, text=message)
-    logger.info("This is an info log message")
-    logger.warning("This is a warning log message")
-    logger.error("This is an error log message")
-
-
+    # logger.info("This is an info log message")
+    await updater.stop()
 
 asyncio.run(start_bot())
