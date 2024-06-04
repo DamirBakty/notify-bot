@@ -82,15 +82,15 @@ async def main(bot, chat_id, auth_token):
                     )
 
         except requests.exceptions.ConnectionError:
-            logger.error('Connection Error occurred. Sleeping for 120 seconds...')
+            logger.exception('Connection Error occurred. Sleeping for 120 seconds...')
             time.sleep(120)
         except requests.exceptions.ReadTimeout:
-            logger.error('Request Timed Out')
+            logger.exception('Request Timed Out')
             continue
         except requests.exceptions.HTTPError as err:
-            logger.error(f'HTTP error. Status: {err}')
+            logger.exception(f'HTTP error. Status: {err}')
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
         await updater.stop()
 
 
