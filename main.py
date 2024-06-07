@@ -6,13 +6,13 @@ import requests
 from environs import Env
 from telegram import Bot
 
-from bot import get_bot_updater, get_bot_handler
+from bot_handler import get_bot_updater, get_bot_handler
 
 
-async def main(bot, chat_id, auth_token):
+async def start_polling(bot, chat_id, auth_token):
     logger = logging.getLogger()
     updater = await get_bot_updater(bot)
-    bot_handler = await get_bot_handler(updater, chat_id)
+    bot_handler = get_bot_handler(updater, chat_id)
 
     logger.addHandler(bot_handler)
 
@@ -94,13 +94,17 @@ async def main(bot, chat_id, auth_token):
         await updater.stop()
 
 
-if __name__ == '__main__':
+def main():
     env = Env()
     env.read_env()
-    auth_token = env.str('TOKEN')
+    auth_token = env.str('DEVMAN_TOKEN')
     bot_token = env.str('BOT_TOKEN')
     chat_id = env.str('CHAT_ID')
 
     bot = Bot(token=bot_token)
 
-    asyncio.run(main(bot, chat_id, auth_token))
+    asyncio.run(start_polling(bot, chat_id, auth_token))
+
+
+if __name__ == '__main__':
+    main()

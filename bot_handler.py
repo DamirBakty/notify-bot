@@ -30,7 +30,7 @@ async def get_bot_updater(bot):
     return updater
 
 
-async def get_bot_handler(updater, chat_id):
+def get_bot_handler(updater, chat_id):
     bot_handler = BotHandler(updater, chat_id)
     bot_handler.setLevel(logging.ERROR)
     bot_handler.setFormatter(logging.Formatter('%(message)s'))
