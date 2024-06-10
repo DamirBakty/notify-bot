@@ -6,13 +6,13 @@ import requests
 from environs import Env
 from telegram import Bot
 
-from bot_handler import get_bot_updater, get_bot_handler
+from bot_handler import get_bot_handler
+
+logger = logging.getLogger(__file__)
 
 
 async def start_polling(bot, chat_id, auth_token):
-    logger = logging.getLogger()
-    updater = await get_bot_updater(bot)
-    bot_handler = get_bot_handler(updater, chat_id)
+    bot_handler = get_bot_handler(bot, chat_id)
 
     logger.addHandler(bot_handler)
 
@@ -26,10 +26,8 @@ async def start_polling(bot, chat_id, auth_token):
     timestamp = None
 
     params = {}
-    await updater.initialize()
 
     while True:
-        await updater.start_polling()
         try:
             if timestamp:
                 params['timestamp'] = timestamp
@@ -72,8 +70,11 @@ async def start_polling(bot, chat_id, auth_token):
                             text=message,
                             parse_mode='Markdown',
                         )
+                        await asyncio.sleep(1)
+
                     except Exception as e:
                         logger.debug(e)
+                        await asyncio.sleep(1)
 
                     telegram_message_sent_timestamp = time.time()
                     logger.debug(
@@ -83,15 +84,17 @@ async def start_polling(bot, chat_id, auth_token):
 
         except requests.exceptions.ConnectionError:
             logger.exception('Connection Error occurred. Sleeping for 120 seconds...')
-            time.sleep(120)
+            await asyncio.sleep(120)
         except requests.exceptions.ReadTimeout:
             logger.exception('Request Timed Out')
+            await asyncio.sleep(1)
             continue
         except requests.exceptions.HTTPError as err:
             logger.exception(f'HTTP error. Status: {err}')
+            await asyncio.sleep(1)
         except Exception as e:
             logger.exception(e)
-        await updater.stop()
+            await asyncio.sleep(1)
 
 
 def main():
@@ -103,7 +106,9 @@ def main():
 
     bot = Bot(token=bot_token)
 
-    asyncio.run(start_polling(bot, chat_id, auth_token))
+    loop = asyncio.get_event_loop()
+    loop.create_task(start_polling(bot, chat_id, auth_token))
+    loop.run_forever()
 
 
 if __name__ == '__main__':
