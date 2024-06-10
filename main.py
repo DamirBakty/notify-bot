@@ -12,9 +12,7 @@ logger = logging.getLogger(__file__)
 
 
 async def start_polling(bot, chat_id, auth_token):
-    bot_handler = get_bot_handler(bot, chat_id)
 
-    logger.addHandler(bot_handler)
 
     headers = {
         'Authorization': auth_token
@@ -105,6 +103,9 @@ def main():
     chat_id = env.str('CHAT_ID')
 
     bot = Bot(token=bot_token)
+
+    bot_handler = get_bot_handler(bot, chat_id)
+    logger.addHandler(bot_handler)
 
     loop = asyncio.get_event_loop()
     loop.create_task(start_polling(bot, chat_id, auth_token))
