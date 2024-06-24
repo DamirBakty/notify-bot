@@ -84,7 +84,7 @@ async def start_polling(bot, chat_id, auth_token):
             logger.exception('Connection Error occurred. Sleeping for 120 seconds...')
             await asyncio.sleep(120)
         except requests.exceptions.ReadTimeout:
-            logger.exception('Request Timed Out')
+            logger.debug('Request Timed Out')
             await asyncio.sleep(1)
             continue
         except requests.exceptions.HTTPError as err:
